@@ -1,0 +1,124 @@
+{
+  "image_info": {
+    "file_name": "P001_20240115_001.jpg",
+    "width": 800,
+    "height": 600,
+    "format": "jpg",
+    "created_at": "2024-01-15T10:30:00"
+  },
+  "annotations": [
+    {
+      "grid_id": 1,
+      "position": "左寸(心)",
+      "text": "浮而有力，节律齐",
+      "bbox": [50, 50, 200, 150],
+      "attributes": {
+        "pulse_type": "浮脉",
+        "strength": "强",
+        "rhythm": "齐",
+        "confidence": 0.95
+      }
+    },
+    {
+      "grid_id": 2,
+      "position": "左关(肝)",
+      "text": "弦细，略有涩感",
+      "bbox": [300, 50, 200, 150],
+      "attributes": {
+        "pulse_type": "弦脉",
+        "strength": "中",
+        "rhythm": "齐",
+        "confidence": 0.92
+      }
+    },
+    {
+      "grid_id": 3,
+      "position": "左尺(肾)",
+      "text": "沉而无力，尺脉弱",
+      "bbox": [550, 50, 200, 150],
+      "attributes": {
+        "pulse_type": "沉脉",
+        "strength": "弱",
+        "rhythm": "齐",
+        "confidence": 0.88
+      }
+    },
+    {
+      "grid_id": 4,
+      "position": "右寸(肺)",
+      "text": "浮缓，略有滑象",
+      "bbox": [50, 225, 200, 150],
+      "attributes": {
+        "pulse_type": "浮脉",
+        "strength": "中",
+        "rhythm": "齐",
+        "confidence": 0.90
+      }
+    },
+    {
+      "grid_id": 5,
+      "position": "右关(脾)",
+      "text": "缓而有力，脾胃调和",
+      "bbox": [300, 225, 200, 150],
+      "attributes": {
+        "pulse_type": "缓脉",
+        "strength": "强",
+        "rhythm": "齐",
+        "confidence": 0.93
+      }
+    },
+    {
+      "grid_id": 6,
+      "position": "右尺(肾)",
+      "text": "沉细，肾阳不足",
+      "bbox": [550, 225, 200, 150],
+      "attributes": {
+        "pulse_type": "沉脉",
+        "strength": "弱",
+        "rhythm": "齐",
+        "confidence": 0.91
+      }
+    },
+    {
+      "grid_id": 7,
+      "position": "总体评价",
+      "text": "左右脉象不均，左弦右缓，上焦有热，下焦虚寒",
+      "bbox": [50, 400, 200, 150],
+      "attributes": {
+        "pulse_type": "复合脉",
+        "strength": "中",
+        "rhythm": "齐",
+        "confidence": 0.89
+      }
+    },
+    {
+      "grid_id": 8,
+      "position": "脉象特征",
+      "text": "弦滑脉为主，兼有沉细，提示肝郁脾虚，肾气不足",
+      "bbox": [300, 400, 200, 150],
+      "attributes": {
+        "pulse_type": "复合脉",
+        "strength": "中",
+        "rhythm": "齐",
+        "confidence": 0.87
+      }
+    },
+    {
+      "grid_id": 9,
+      "position": "诊断建议",
+      "text": "建议疏肝解郁，健脾温肾。方用逍遥散加减，配合金匮肾气丸",
+      "bbox": [550, 400, 200, 150],
+      "attributes": {
+        "pulse_type": "复合脉",
+        "strength": "中",
+        "rhythm": "齐",
+        "confidence": 0.85
+      }
+    }
+  ],
+  "metadata": {
+    "annotator": "张医生",
+    "annotation_date": "2024-01-15T11:00:00",
+    "version": "1.0"
+  }
+}
