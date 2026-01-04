@@ -9,6 +9,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 import uvicorn
+from pypinyin import lazy_pinyin, Style
 
 # Ensure src is in python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -62,7 +63,8 @@ async def search_patients(
     patients = db.query(Patient).filter(
         or_(
             Patient.name.ilike(f"%{query}%"),
-            Patient.phone.ilike(f"%{query}%")
+            Patient.phone.ilike(f"%{query}%"),
+            Patient.pinyin.ilike(f"%{query}%")
         )
     ).limit(20).all()
     
@@ -186,11 +188,15 @@ async def save_record(data: Dict[str, Any], db: Session = Depends(get_db)):
         patient = patient_query.first()
         
         if not patient:
+            # Generate pinyin initials
+            pinyin_initials = "".join(lazy_pinyin(patient_name, style=Style.FIRST_LETTER))
+            
             patient = Patient(
                 name=patient_name,
                 gender=patient_info.get("gender"),
                 age=int(patient_info.get("age", 0)) if patient_info.get("age") else None,
                 phone=patient_info.get("phone"),
+                pinyin=pinyin_initials,
                 info=patient_info  # Store full patient info in JSONB flesh too
             )
             db.add(patient)
@@ -201,6 +207,11 @@ async def save_record(data: Dict[str, Any], db: Session = Depends(get_db)):
             if patient_info.get("phone") and not patient.phone:
                 patient.phone = patient_info.get("phone")
                 db.commit()
+            
+            # Update pinyin if missing (for legacy data)
+            if not patient.pinyin:
+                 patient.pinyin = "".join(lazy_pinyin(patient.name, style=Style.FIRST_LETTER))
+                 db.commit()
             
         # 2. Create Medical Record
         # Relational Skeleton
@@ -360,6 +371,75 @@ async def analyze_record(data: Dict[str, Any]):
         "prescription_comment": prescription_comment,
         "suggestion": suggestion
     }
+
+@app.post("/api/records/search_similar")
+async def search_similar_records(data: Dict[str, Any], db: Session = Depends(get_db)):
+    """
+    Search for similar medical records based on pulse grid data
+    """
+    current_grid = data.get("pulse_grid", {})
+    if not current_grid:
+        return []
+        
+    # Get all records to compare (in production, use vector search or more efficient filtering)
+    # For now, we fetch latest 100 records to compare
+    candidates = db.query(MedicalRecord).order_by(MedicalRecord.created_at.desc()).limit(100).all()
+    
+    results = []
+    grid_keys = [
+        "cun-fu", "guan-fu", "chi-fu",
+        "cun-zhong", "guan-zhong", "chi-zhong",
+        "cun-chen", "guan-chen", "chi-chen"
+    ]
+    
+    for record in candidates:
+        if not record.data or "pulse_grid" not in record.data:
+            continue
+            
+        candidate_grid = record.data["pulse_grid"]
+        score = 0
+        matches = []
+        
+        # 1. Compare 9-grid keys
+        for key in grid_keys:
+            val1 = current_grid.get(key, "").strip()
+            val2 = candidate_grid.get(key, "").strip()
+            
+            if val1 and val2:
+                if val1 == val2:
+                    score += 10 # Exact match
+                    matches.append(key)
+                elif val1 in val2 or val2 in val1:
+                    score += 5 # Partial match
+                    matches.append(key)
+        
+        # 2. Compare overall description
+        overall1 = current_grid.get("overall_description", "").strip()
+        overall2 = candidate_grid.get("overall_description", "").strip()
+        if overall1 and overall2:
+            # Simple keyword overlap (Jaccard-ish)
+            set1 = set(overall1)
+            set2 = set(overall2)
+            overlap = len(set1.intersection(set2))
+            if overlap > 0:
+                score += overlap * 2
+                
+        if score > 0:
+            patient = record.patient
+            results.append({
+                "record_id": record.id,
+                "patient_name": patient.name if patient else "Unknown",
+                "visit_date": record.visit_date.strftime("%Y-%m-%d"),
+                "score": score,
+                "pulse_grid": candidate_grid,
+                "matches": matches,
+                "complaint": record.complaint
+            })
+            
+    # Sort by score desc
+    results.sort(key=lambda x: x["score"], reverse=True)
+    
+    return results[:5] # Return top 5
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
-const PulseGrid = ({ data, onChange, onSave }) => {
+const PulseGrid = ({ data, onChange, onSave, onLoadRecord }) => {
+  const [similarRecords, setSimilarRecords] = useState([]);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
+
   const positions = [
     { label: '寸浮', id: 'cun-fu' },
     { label: '关浮', id: 'guan-fu' },
@@ -15,6 +18,40 @@ const PulseGrid = ({ data, onChange, onSave }) => {
 
   const handleCellChange = (id, value) => {
     onChange({ ...data, [id]: value });
+  };
+
+  // Debounced search for similar records
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Only search if there is some data
+      const hasData = Object.keys(data).length > 0;
+      if (hasData) {
+        searchSimilar();
+      } else {
+        setSimilarRecords([]);
+      }
+    }, 1000); // 1s delay
+
+    return () => clearTimeout(timer);
+  }, [data]);
+
+  const searchSimilar = async () => {
+    setLoadingSimilar(true);
+    try {
+      const response = await fetch('/api/records/search_similar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pulse_grid: data })
+      });
+      if (response.ok) {
+        const results = await response.json();
+        setSimilarRecords(results);
+      }
+    } catch (err) {
+      console.error("Search similar failed", err);
+    } finally {
+      setLoadingSimilar(false);
+    }
   };
 
   return (
@@ -55,6 +92,78 @@ const PulseGrid = ({ data, onChange, onSave }) => {
       <button className="btn-primary" onClick={onSave}>
         保存病历
       </button>
+
+      {/* Similar Records Section */}
+      <div className="similar-records-section" style={{ marginTop: '30px', borderTop: '1px solid rgba(0,0,0,0.05)', paddingTop: '20px' }}>
+        <h4 style={{ fontSize: '0.95rem', color: 'var(--apple-text-secondary)', marginBottom: '15px', display: 'flex', justifyContent: 'space-between' }}>
+          <span>相似病历推荐</span>
+          {loadingSimilar && <span style={{fontSize: '0.8rem'}}>搜索中...</span>}
+        </h4>
+        
+        {similarRecords.length === 0 ? (
+          <div style={{ fontSize: '0.85rem', color: '#999', textAlign: 'center' }}>
+            暂无相似病历
+          </div>
+        ) : (
+          <div className="similar-list" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            {similarRecords.map(record => (
+              <div 
+                key={record.record_id} 
+                className="similar-card"
+                onClick={() => onLoadRecord && onLoadRecord(record.record_id)}
+                style={{
+                  background: 'rgba(255,255,255,0.6)',
+                  borderRadius: '12px',
+                  padding: '12px',
+                  cursor: 'pointer',
+                  border: '1px solid rgba(0,0,0,0.05)',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>{record.patient_name}</span>
+                  <span style={{ fontSize: '0.8rem', color: '#888' }}>{record.visit_date}</span>
+                </div>
+                
+                {/* Mini Grid for Visualization */}
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(3, 1fr)', 
+                  gap: '4px', 
+                  marginBottom: '8px',
+                  opacity: 0.9
+                }}>
+                  {positions.map(pos => {
+                    const isMatch = record.matches && record.matches.includes(pos.id);
+                    const val = record.pulse_grid[pos.id] || '';
+                    return (
+                      <div key={pos.id} style={{
+                        background: isMatch ? 'rgba(0, 113, 227, 0.15)' : '#fff',
+                        border: isMatch ? '1px solid rgba(0, 113, 227, 0.3)' : '1px solid #eee',
+                        borderRadius: '4px',
+                        padding: '4px',
+                        fontSize: '0.7rem',
+                        textAlign: 'center',
+                        minHeight: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: isMatch ? 'var(--apple-blue)' : '#666'
+                      }}>
+                        {val || '-'}
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                <div style={{ fontSize: '0.8rem', color: '#666', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  主诉: {record.complaint || '无'}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

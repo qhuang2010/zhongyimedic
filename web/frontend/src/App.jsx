@@ -155,13 +155,14 @@ function App() {
               data={pulseGrid} 
               onChange={setPulseGrid} 
               onSave={handleSave} 
+              onLoadRecord={handleLoadRecord}
             />
           </div>
         </div>
       </div>
       
       <div className="footer">
-          <p>&copy; 2024 中医脉象九宫格病历录入系统 | DeepSeek-OCR Powered</p>
+          <p>黄谦所有，联系方式：qhuang2010@gmail.com</p>
       </div>
     </div>
   );

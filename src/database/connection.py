@@ -5,15 +5,15 @@ import os
 
 # Default to a local PostgreSQL database if not provided
 # User should replace this with their actual DB credentials
-SQLALCHEMY_DATABASE_URL = os.getenv(
-    "DATABASE_URL", 
-    "postgresql://postgres:postgres@localhost:5432/tcm_pulse_db"
-)
+# SQLALCHEMY_DATABASE_URL = os.getenv(
+#     "DATABASE_URL", 
+#     "postgresql://postgres:postgres@localhost:5432/tcm_pulse_db"
+# )
 
 # If using SQLite for fallback (not recommended for JSONB but supported by SQLAlchemy with restrictions)
-# SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
+SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

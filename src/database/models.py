@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Index
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.types import JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .connection import Base
@@ -9,12 +9,13 @@ class Patient(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True, nullable=False)
+    pinyin = Column(String, index=True, nullable=True) # Added pinyin for search
     phone = Column(String, index=True, nullable=True) # Added phone number
     gender = Column(String, nullable=True)
     age = Column(Integer, nullable=True)
     
     # JSONB Flesh for extensible patient details (e.g., lifestyle, family history)
-    info = Column(JSONB, nullable=True, server_default='{}')
+    info = Column(JSON, nullable=True, server_default='{}')
     
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
@@ -38,14 +39,10 @@ class MedicalRecord(Base):
     # - prescription: Text (or structured)
     # - note: Text
     # - raw_input: Full frontend payload for AI training
-    data = Column(JSONB, nullable=False, server_default='{}')
+    data = Column(JSON, nullable=False, server_default='{}')
     
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     patient = relationship("Patient", back_populates="records")
 
-    # Index on JSONB data for faster querying inside the JSON document
-    __table_args__ = (
-        Index('ix_medical_records_data_gin', data, postgresql_using='gin'),
-    )

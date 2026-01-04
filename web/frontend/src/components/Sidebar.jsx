@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const Sidebar = ({ onPatientSelect, onRecordSelect }) => {
   const [query, setQuery] = useState('');
@@ -7,12 +7,25 @@ const Sidebar = ({ onPatientSelect, onRecordSelect }) => {
   const [selectedPatientId, setSelectedPatientId] = useState(null);
   const [patientHistory, setPatientHistory] = useState([]);
 
+  // Debounced search effect
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (query.trim()) {
+        handleSearch();
+      } else {
+        setHistoryUsers([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [query]);
+
   const handleSearch = async () => {
     if (!query.trim()) return;
     
     setLoading(true);
-    setSelectedPatientId(null);
-    setPatientHistory([]);
+    // Note: We don't reset selectedPatientId here to keep the view stable while typing
+    // unless the user clicks a new result.
     
     try {
       const response = await fetch(`/api/patients/search?query=${encodeURIComponent(query)}`);

@@ -101,6 +101,7 @@ body {
   font-size: 0.9rem;
   outline: none;
   transition: all 0.2s;
+  color: var(--apple-text); /* Ensure text is dark */
 }
 
 .sidebar-search-input:focus {
@@ -412,4 +413,11 @@ textarea.form-control {
   color: var(--apple-text-secondary);
   border-top: 1px solid rgba(0, 0, 0, 0.05);
   font-size: 0.8rem;
+}
+
+/* Similar Records Card Hover Effect */
+.similar-card:hover {
+  background: rgba(255, 255, 255, 0.9) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
