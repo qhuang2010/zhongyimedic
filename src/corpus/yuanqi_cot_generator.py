@@ -387,11 +387,14 @@ class YuanqiCoTGenerator:
         syndrome: SyndromeDifferentiation,
         treatment: TreatmentPrinciple
     ) -> tuple:
-        """生成方药推理步骤"""
+        """生成方药推理步骤 - 增强版，包含元气脉法用药选择逻辑"""
         self.step_counter += 1
         
         # 获取治疗方案
         protocol = self.kb.get_treatment_protocol(state, "")
+        
+        # 元气脉法核心用药规则：根据脉空程度选择主药
+        medication_rules = self._get_medication_selection_rules(state)
         
         if protocol and protocol.formulas:
             formula_info = protocol.formulas[0]
@@ -407,40 +410,158 @@ class YuanqiCoTGenerator:
                         rationale=herb_data.get("note", "")
                     ))
             
+            # 构建详细的用药分析
+            herb_analysis = self._build_herb_analysis(medication_rules, herbs)
+            
             prescription = PrescriptionRationale(
                 formula_name=formula_info["name"],
                 formula_source="元气脉法常用方",
                 formula_analysis=f"元气脉法治疗{state.value}之主方",
                 herbs=herbs,
-                compatibility_analysis="以温阳药为主，配合补益"
+                compatibility_analysis=herb_analysis
             )
             
             step = ReasoningStep(
                 step_number=self.step_counter,
                 reasoning_type="类比",
                 premise=f"治法：{treatment.primary_principle}",
-                inference=f"元气脉法常用{formula_info['name']}治疗此类证型",
-                conclusion=f"选方：{formula_info['name']}",
-                classical_reference="元气脉法常用方",
+                inference=f"元气脉法常用{formula_info['name']}治疗此类证型。\n{medication_rules['reasoning']}",
+                conclusion=f"选方：{formula_info['name']}\n用药要点：{medication_rules['key_points']}",
+                classical_reference="元气脉法用药原则",
                 confidence=0.9
             )
         else:
+            # 使用元气脉法默认用药逻辑
+            herbs = self._generate_default_herbs(state)
+            herb_analysis = self._build_herb_analysis(medication_rules, herbs)
+            
             prescription = PrescriptionRationale(
-                formula_name="附子理中汤加减",
-                formula_source="元气脉法常用方",
-                formula_analysis="温补元阳基础方"
+                formula_name="元气脉法基础方",
+                formula_source="元气脉法临床经验",
+                formula_analysis=f"根据脉空程度选药：{medication_rules['main_herb']}",
+                herbs=herbs,
+                compatibility_analysis=herb_analysis
             )
             
             step = ReasoningStep(
                 step_number=self.step_counter,
                 reasoning_type="推断",
                 premise=f"治法：{treatment.primary_principle}",
-                inference="依据元气脉法用药原则",
-                conclusion="选方：附子理中汤加减",
-                confidence=0.7
+                inference=medication_rules['reasoning'],
+                conclusion=f"选方：元气脉法基础方\n{medication_rules['key_points']}",
+                classical_reference="元气脉法用药原则",
+                confidence=0.85
             )
         
         return step, prescription
+    
+    def _get_medication_selection_rules(self, state: YuanqiState) -> Dict[str, str]:
+        """
+        获取元气脉法用药选择规则
+        核心原则：根据脉空程度（分数）选择不同的补阴/温阳药物
+        """
+        rules = {
+            YuanqiState.ABUNDANT: {
+                "main_herb": "无需用药",
+                "reasoning": "脉象有根，元气充盛，调养即可",
+                "key_points": "以调养为主，无需药物干预",
+                "pulse_score": "0分"
+            },
+            YuanqiState.SLIGHTLY_DEFICIENT: {
+                "main_herb": "山药1-1.5g",
+                "reasoning": "脉空约2-3分时，山药养中补阴。山药性平，适合轻度元气虚损。",
+                "key_points": "脉空约3分用山药；佩兰引气至表；白芍敛阴固表",
+                "pulse_score": "2-3分"
+            },
+            YuanqiState.DEFICIENT: {
+                "main_herb": "党参1.5g或山药1.5g",
+                "reasoning": "脉空4-5分时，党参补阴力量更强。党参补中益气，兼能生津。",
+                "key_points": "脉空4-5分党参补阴；佩兰引阴化表；甘草缓释温阳；白芍固表",
+                "pulse_score": "4-5分"
+            },
+            YuanqiState.SEVERELY_DEFICIENT: {
+                "main_herb": "麦冬1.5g",
+                "reasoning": "脉空>5分时，麦冬养阴力量最强。麦冬滋阴润肺，清心除烦。",
+                "key_points": "脉空>5分用麦冬养阴；佩兰化部分新生之阴并引气于表以固卫；炙甘草护中缓势",
+                "pulse_score": ">5分"
+            },
+            YuanqiState.FLOATING: {
+                "main_herb": "附片1g + 仙灵脾1g",
+                "reasoning": "虚阳外越时，需温阳潜镇。附片温肾阳，仙灵脾温肾壮阳。",
+                "key_points": "附片温阳；仙灵脾温肾阳；白芍敛阴；需引火归元",
+                "pulse_score": "虚浮"
+            }
+        }
+        
+        return rules.get(state, {
+            "main_herb": "山药1.5g",
+            "reasoning": "元气脉法基础用药",
+            "key_points": "健脾运中、扶卫引气",
+            "pulse_score": "待定"
+        })
+    
+    def _generate_default_herbs(self, state: YuanqiState) -> List[HerbEntry]:
+        """生成元气脉法默认处方"""
+        base_herbs = [
+            HerbEntry(name="炙甘草", dosage="1g", role="使", function="护中缓势", 
+                     rationale="调和诸药，保护中焦"),
+            HerbEntry(name="佩兰", dosage="2.5g", role="臣", function="引气至表", 
+                     rationale="化部分新生之阴并引气于表以固卫"),
+            HerbEntry(name="白芍", dosage="1g", role="臣", function="敛阴固表", 
+                     rationale="收敛佩兰之阳以护卫表之门")
+        ]
+        
+        # 根据元气状态选择主药
+        if state == YuanqiState.SEVERELY_DEFICIENT:
+            base_herbs.insert(0, HerbEntry(
+                name="麦冬", dosage="1.5g", role="君", function="养阴",
+                rationale="脉空>5分用麦冬养阴"
+            ))
+        elif state == YuanqiState.DEFICIENT:
+            base_herbs.insert(0, HerbEntry(
+                name="党参", dosage="1.5g", role="君", function="补阴益气",
+                rationale="脉空4-5分党参补阴"
+            ))
+        elif state == YuanqiState.FLOATING:
+            base_herbs.insert(0, HerbEntry(
+                name="附片", dosage="1g", role="君", function="温阳",
+                rationale="虚阳外越，附片温阳潜镇"
+            ))
+            base_herbs.insert(1, HerbEntry(
+                name="仙灵脾", dosage="1g", role="臣", function="温肾阳",
+                rationale="温肾阳以引火归元"
+            ))
+        else:
+            base_herbs.insert(0, HerbEntry(
+                name="山药", dosage="1.5g", role="君", function="养中补阴",
+                rationale="脉空约3分用山药养中"
+            ))
+        
+        return base_herbs
+    
+    def _build_herb_analysis(self, rules: Dict, herbs: List[HerbEntry]) -> str:
+        """构建用药分析说明"""
+        analysis_parts = [
+            f"【元气脉法用药原则】",
+            f"- 脉空程度：{rules.get('pulse_score', '待定')}",
+            f"- 主药选择：{rules.get('main_herb', '山药')}",
+            f"- 选药理由：{rules.get('reasoning', '')}",
+            f"",
+            f"【具体用药】"
+        ]
+        
+        for herb in herbs:
+            if herb.rationale:
+                analysis_parts.append(f"- {herb.name} {herb.dosage}：{herb.rationale}")
+            else:
+                analysis_parts.append(f"- {herb.name} {herb.dosage}：{herb.function}")
+        
+        analysis_parts.extend([
+            "",
+            f"【用法】每日800ml水，泡半小时，煎半小时，小口多次服用"
+        ])
+        
+        return "\n".join(analysis_parts)
     
     def _generate_outcome(self, state: YuanqiState) -> str:
         """生成预期疗效"""
