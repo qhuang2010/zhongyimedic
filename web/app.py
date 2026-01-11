@@ -288,47 +288,111 @@ async def save_record(data: Dict[str, Any], db: Session = Depends(get_db)):
 @app.post("/api/analyze")
 async def analyze_record(data: Dict[str, Any]):
     """
-    Advanced Rule-Based Analysis Simulation based on Shanghan Lun and Zheng Qin'an (Fire Spirit School) logic.
+    AI智能评价 - 整合元气脉法思维链
+    Advanced AI Analysis integrating Yuanqi Pulse Method Chain-of-Thought reasoning.
     """
     medical_record = data.get("medical_record", {})
     pulse_grid = data.get("pulse_grid", {})
     
     complaint = medical_record.get("complaint", "")
     prescription = medical_record.get("prescription", "")
+    symptoms = medical_record.get("symptoms", [])
     
-    # 1. Parse Pulse Data
-    # Extract key qualities from the grid (Now supporting left/right)
-    # Helper to aggregate from both hands
+    # 如果症状是字符串，尝试解析
+    if isinstance(symptoms, str):
+        symptoms = [s.strip() for s in symptoms.split("，") if s.strip()]
+    
+    # ========================================
+    # 1. 生成元气脉法思维链（核心创新）
+    # ========================================
+    cot_result = None
+    yuanqi_analysis = ""
+    medication_analysis = ""
+    
+    if COT_MODULES_AVAILABLE:
+        try:
+            # 转换脉象数据格式
+            pulse_positions = {}
+            
+            # 解析左右手脉象
+            for side in ["left", "right"]:
+                for i, pos in enumerate(["cun", "guan", "chi"]):
+                    pos_key = str(i + 1) if side == "left" else str(i + 4)
+                    levels = {}
+                    for level in ["fu", "zhong", "chen"]:
+                        key = f"{side}-{pos}-{level}"
+                        val = pulse_grid.get(key, "")
+                        if val:
+                            levels[level] = val
+                    if levels:
+                        pulse_positions[pos_key] = {"levels": levels}
+            
+            # 添加总体描述
+            overall = pulse_grid.get("overall_description", "")
+            if overall:
+                pulse_positions["7"] = {"value": overall}
+            
+            # 生成元气脉法思维链
+            cot = generate_yuanqi_chain_of_thought(
+                pulse_grid_data={"positions": pulse_positions},
+                symptoms=symptoms if symptoms else [complaint],
+                chief_complaint=complaint,
+                patient_info={}
+            )
+            cot_result = cot.to_dict()
+            
+            # 提取关键分析内容
+            reasoning_steps = cot_result.get("reasoning_steps", [])
+            
+            yuanqi_analysis = "【元气脉法思维链分析】\n\n"
+            for step in reasoning_steps:
+                step_num = step.get("step_number", 0)
+                step_type = step.get("reasoning_type", "")
+                premise = step.get("premise", "")
+                conclusion = step.get("conclusion", "")
+                inference = step.get("inference", "")
+                
+                yuanqi_analysis += f"步骤{step_num}（{step_type}）：\n"
+                yuanqi_analysis += f"  前提：{premise}\n"
+                if inference:
+                    yuanqi_analysis += f"  推理：{inference[:150]}{'...' if len(inference) > 150 else ''}\n"
+                yuanqi_analysis += f"  结论：{conclusion}\n\n"
+            
+            # 处方分析
+            prescription_data = cot_result.get("prescription", {})
+            if prescription_data:
+                medication_analysis = "【元气脉法用药分析】\n\n"
+                medication_analysis += f"推荐方剂：{prescription_data.get('formula_name', '待定')}\n"
+                medication_analysis += f"方剂解析：{prescription_data.get('formula_analysis', '')}\n\n"
+                
+                compat = prescription_data.get("compatibility_analysis", "")
+                if compat:
+                    medication_analysis += f"{compat}\n"
+                
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            yuanqi_analysis = f"思维链生成异常：{str(e)}"
+    
+    # ========================================
+    # 2. 传统规则分析（保留作为补充）
+    # ========================================
+    
     def get_qualities(pos, level):
-        # Check specific left/right keys first, fallback to generic if not found (legacy support)
         vals = []
         for side in ["left", "right"]:
             key = f"{side}-{pos}-{level}"
             val = pulse_grid.get(key, "").strip()
             if val: vals.append(val)
-        
-        # Also check legacy generic keys
         legacy_key = f"{pos}-{level}"
         legacy_val = pulse_grid.get(legacy_key, "").strip()
         if legacy_val: vals.append(legacy_val)
-        
         return vals
 
-    fu_qualities = []
-    for p in ["cun", "guan", "chi"]:
-        fu_qualities.extend(get_qualities(p, "fu"))
-        
-    zhong_qualities = []
-    for p in ["cun", "guan", "chi"]:
-        zhong_qualities.extend(get_qualities(p, "zhong"))
-        
     chen_qualities = []
     for p in ["cun", "guan", "chi"]:
         chen_qualities.extend(get_qualities(p, "chen"))
-        
-    overall_pulse = pulse_grid.get("overall_description", "")
     
-    # Helper to check keywords in a list of strings
     def check_keywords(qualities, keywords):
         for q in qualities:
             for k in keywords:
@@ -336,108 +400,64 @@ async def analyze_record(data: Dict[str, Any]):
                     return True
         return False
     
-    # Helper for overall description
-    def check_overall(keywords):
-        for k in keywords:
-            if k in overall_pulse:
-                return True
-        return False
-
-    is_floating_tight = check_keywords(fu_qualities, ["紧", "弦"]) or check_overall(["紧", "弦"])
-    is_floating_weak = check_keywords(fu_qualities, ["细", "弱", "微", "无"]) or check_overall(["细", "弱", "虚"])
-    is_deep_empty = check_keywords(chen_qualities, ["无", "空", "微", "弱"]) or check_overall(["无根", "空", "豁"])
-    is_middle_empty = check_keywords(zhong_qualities, ["空", "无", "弱"])
+    is_deep_empty = check_keywords(chen_qualities, ["无", "空", "微", "弱", "虚"])
     
-    # 2. Logic Engine (Zheng Qin'an / Shanghan Perspective)
-    
-    # Diagnosis Pattern Detection
-    pattern = "Unknown"
-    consistency_comment = ""
-    suggestion = ""
-    
-    # Pattern: Rootless Yang / True Cold False Heat (Zheng Qin'an Focus)
-    # Signs: Floating pulse is present (maybe even big/tight), but Deep/Root is Empty/None.
-    if is_deep_empty and (check_keywords(fu_qualities, ["大", "浮", "紧", "弦", "细"])):
-        pattern = "Rootless Yang"
-        consistency_comment = (
-            "【郑钦安视角】脉象呈现“寸关尺浮取可见，但沉取无力或空虚”，此乃“阳气外浮，下元虚寒”之象。\n"
-            "虽浮部见紧或细，切不可误认为单纯表实证。沉取无根，说明肾阳虚衰，真阳不能潜藏，反逼虚阳上浮外越。\n"
-            "若主诉有“头晕、面红”等看似热象，实为“真寒假热”。"
-        )
-        suggestion = (
-            "建议：急当扶阳抑阴，引火归元。\n"
-            "切忌使用发散风寒之辛温解表药（如麻黄）或苦寒直折之药，恐耗散仅存之真阳。\n"
-            "推荐方剂：四逆汤、白通汤或潜阳丹加减。"
-        )
-        
-    # Pattern: Taiyang Cold Damage (Shanghan Lun)
-    # Signs: Floating and Tight, Deep is relatively normal or tight.
-    elif is_floating_tight and not is_deep_empty:
-        pattern = "Taiyang Cold"
-        consistency_comment = (
-            "【伤寒论视角】脉浮而紧，乃太阳伤寒表实证之典型脉象。\n"
-            "“寸口脉浮而紧，浮则为风，紧则为寒”，寒邪束表，卫阳闭郁。\n"
-            "若主诉伴有“恶寒、发热、身痛、无汗”，则脉证高度一致。"
-        )
-        suggestion = (
-            "建议：辛温解表，发汗宣肺。\n"
-            "推荐方剂：麻黄汤加减。\n"
-            "注意：若患者素体汗多或尺脉迟弱，需防过汗伤阳，可考虑桂枝汤或桂枝加葛根汤。"
-        )
-
-    # Pattern: Spleen/Stomach Deficiency (Middle Burner)
-    elif is_middle_empty:
-        pattern = "Middle Deficiency"
-        consistency_comment = (
-            "【脉象分析】关部（中候）见空/弱，提示中焦脾胃之气虚损。\n"
-            "脾胃为后天之本，中气不足则生化无源。"
-        )
-        suggestion = (
-            "建议：健脾益气，调和中焦。\n"
-            "推荐方剂：理中汤或补中益气汤加减。"
-        )
-        
+    # 元气状态判断
+    yuanqi_state = "待评估"
+    if is_deep_empty:
+        yuanqi_state = "元气虚损（沉取无根）"
     else:
-        # Default / Fallback
-        consistency_comment = (
-            "脉象显示：浮部" + "/".join([q for q in fu_qualities if q]) + 
-            "，沉部" + "/".join([q for q in chen_qualities if q]) + "。\n"
-            "需结合“望闻问切”四诊合参。若浮沉皆无力，多属气血两虚；若脉象有力，多属实证。"
-        )
-        suggestion = "建议结合舌苔及其他临床症状进一步辨证。"
-
-    # 3. Prescription Analysis
+        yuanqi_state = "元气尚可（沉取有力）"
+    
+    # ========================================
+    # 3. 处方一致性分析
+    # ========================================
     prescription_comment = ""
     if not prescription or len(prescription) < 2:
         prescription_comment = "未提供完整处方，无法进行具体药物对证分析。"
     else:
-        # Simple keyword check for warming herbs
-        warming_herbs = ["附子", "干姜", "肉桂", "桂枝", "细辛", "吴茱萸"]
-        clearing_herbs = ["石膏", "知母", "黄连", "黄芩", "大黄"]
+        warming_herbs = ["附子", "干姜", "肉桂", "桂枝", "细辛", "吴茱萸", "附片", "仙灵脾"]
+        nourishing_herbs = ["麦冬", "党参", "山药", "熟地", "枸杞"]
         
-        has_warming = check_keywords([prescription], warming_herbs)
-        has_clearing = check_keywords([prescription], clearing_herbs)
+        has_warming = any(h in prescription for h in warming_herbs)
+        has_nourishing = any(h in prescription for h in nourishing_herbs)
         
-        if pattern == "Rootless Yang":
+        if is_deep_empty:
             if has_warming:
-                prescription_comment = "处方中包含扶阳药物，符合“扶阳抑阴”的治疗原则，方向正确。"
-            elif has_clearing:
-                prescription_comment = "【警示】处方中包含寒凉药物，与“下元虚寒、阳气外越”的病机相悖，恐致“雪上加霜”，请慎重复核！"
+                prescription_comment = "✅ 处方包含温阳药物，符合元气脉法'沉取无根需温补元阳'原则，方向正确。"
+            elif has_nourishing:
+                prescription_comment = "⚠️ 处方以养阴为主，需评估脉空程度。若脉空>5分宜养阴；若为虚阳外越则需温阳。"
             else:
-                prescription_comment = "处方似乎未重用温潜之品，对于真阳虚衰之证，力度可能不足。"
-        elif pattern == "Taiyang Cold":
-            if "麻黄" in prescription or "桂枝" in prescription:
-                prescription_comment = "处方包含解表散寒之药，符合太阳病治疗原则。"
-            else:
-                prescription_comment = "处方未见典型解表药，若确诊为太阳伤寒，需考虑是否用药偏颇。"
+                prescription_comment = "⚠️ 处方未见明显温阳或养阴之品，对于元气虚损证，力度可能不足。"
         else:
-            prescription_comment = "处方需结合具体病机分析。若为虚寒证，宜温补；若为实热证，宜清泄。"
+            prescription_comment = "脉象沉取有力，元气尚可。处方需结合具体病证综合分析。"
 
-    return {
-        "consistency_comment": consistency_comment,
+    # ========================================
+    # 4. 构建返回结果
+    # ========================================
+    
+    result = {
+        "yuanqi_state": yuanqi_state,
+        "consistency_comment": yuanqi_analysis if yuanqi_analysis else "元气脉法模块未加载",
         "prescription_comment": prescription_comment,
-        "suggestion": suggestion
+        "medication_analysis": medication_analysis,
+        "suggestion": cot_result.get("expected_outcome", "请结合临床综合判断") if cot_result else "请结合四诊合参",
     }
+    
+    # 如果有完整思维链，添加详细数据
+    if cot_result:
+        result["chain_of_thought"] = cot_result
+        
+        # 提取关键诊断信息
+        syndrome = cot_result.get("syndrome_differentiation", {})
+        if syndrome:
+            result["syndrome"] = syndrome.get("evidence_summary", "")
+            
+        treatment = cot_result.get("treatment_principle", {})
+        if treatment:
+            result["treatment_principle"] = treatment.get("primary_principle", "")
+    
+    return result
 
 @app.post("/api/records/search_similar")
 async def search_similar_records(data: Dict[str, Any], db: Session = Depends(get_db)):
