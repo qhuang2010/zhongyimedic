@@ -24,6 +24,10 @@ try:
     from src.corpus.knowledge_base import knowledge_base
     from src.evaluation.metrics import MetricsCalculator, EvaluationResult
     from src.evaluation.validation_framework import validation_framework
+    
+    # Yuanqi Pulse Method modules
+    from src.corpus.yuanqi_cot_generator import generate_yuanqi_chain_of_thought
+    from src.corpus.yuanqi_knowledge_base import yuanqi_knowledge_base
     COT_MODULES_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: CoT modules not fully available: {e}")
@@ -681,6 +685,115 @@ async def get_clause_details(clause_id: str):
         raise HTTPException(status_code=404, detail=f"Clause '{clause_id}' not found")
     
     return clause
+
+
+# ============================================================
+# Yuanqi Pulse Method API Endpoints (元气脉法)
+# ============================================================
+
+@app.post("/api/yuanqi/generate-cot")
+async def generate_yuanqi_cot_endpoint(data: Dict[str, Any]):
+    """
+    Generate Chain-of-Thought reasoning using Yuanqi Pulse Method (元气脉法).
+    
+    This is the core innovation endpoint - generates explainable diagnostic
+    reasoning based on proprietary Yuanqi Pulse Method theory.
+    """
+    if not COT_MODULES_AVAILABLE:
+        raise HTTPException(
+            status_code=503, 
+            detail="Yuanqi modules not available"
+        )
+    
+    try:
+        pulse_grid = data.get("pulse_grid", {})
+        symptoms = data.get("symptoms", [])
+        chief_complaint = data.get("chief_complaint", "")
+        patient_info = data.get("patient_info", {})
+        
+        if not chief_complaint:
+            raise HTTPException(status_code=400, detail="Chief complaint is required")
+        
+        # Generate Yuanqi Chain-of-Thought
+        cot = generate_yuanqi_chain_of_thought(
+            pulse_grid_data=pulse_grid,
+            symptoms=symptoms,
+            chief_complaint=chief_complaint,
+            patient_info=patient_info
+        )
+        
+        return {
+            "status": "success",
+            "method": "yuanqi_pulse_method",
+            "chain_of_thought": cot.to_dict()
+        }
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/yuanqi/stats")
+async def get_yuanqi_stats():
+    """
+    Get statistics about the Yuanqi Pulse Method knowledge base.
+    """
+    if not COT_MODULES_AVAILABLE:
+        raise HTTPException(
+            status_code=503, 
+            detail="Yuanqi modules not available"
+        )
+    
+    try:
+        stats = yuanqi_knowledge_base.get_corpus_stats()
+        
+        return {
+            "corpus_name": "Yuanqi-Pulse-Method-Corpus",
+            "version": "1.0.0",
+            "description": "元气脉法诊疗知识库",
+            "is_proprietary": True,
+            "knowledge_base": stats,
+            "pulse_patterns": [
+                p.pattern_name for p in yuanqi_knowledge_base.pulse_patterns.values()
+            ]
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/yuanqi/pattern/{pattern_name}")
+async def get_yuanqi_pattern(pattern_name: str):
+    """
+    Get details of a specific Yuanqi pulse pattern.
+    """
+    if not COT_MODULES_AVAILABLE:
+        raise HTTPException(
+            status_code=503, 
+            detail="Yuanqi modules not available"
+        )
+    
+    pattern = yuanqi_knowledge_base.get_pattern_by_name(pattern_name)
+    if not pattern:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Pattern '{pattern_name}' not found"
+        )
+    
+    return {
+        "pattern_id": pattern.pattern_id,
+        "pattern_name": pattern.pattern_name,
+        "key_features": pattern.key_features,
+        "diagnostic_meaning": {
+            "yuanqi_state": pattern.diagnostic_meaning.get("yuanqi_state", "").value 
+                if hasattr(pattern.diagnostic_meaning.get("yuanqi_state", ""), "value") 
+                else str(pattern.diagnostic_meaning.get("yuanqi_state", "")),
+            "pathomechanism": pattern.diagnostic_meaning.get("pathomechanism", "")
+        },
+        "treatment_direction": pattern.treatment_direction,
+        "associated_symptoms": pattern.associated_symptoms
+    }
 
 
 if __name__ == "__main__":
