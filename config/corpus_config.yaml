@@ -1,0 +1,104 @@
+# 中医思维链语料库配置
+# TCM Chain-of-Thought Corpus Configuration
+
+corpus:
+  name: "TCM-CoT-Corpus"
+  version: "1.0.0"
+  description: "中医思维链语料库 - 伤寒论为主的辨证论治知识库"
+  
+  # 数据路径
+  data_paths:
+    raw_data: "./data/corpus/raw"
+    processed_data: "./data/corpus/processed"
+    sample_data: "./data/corpus/sample_cot_data"
+    classical_texts: "./data/corpus/shanghan_lun"
+    syndrome_patterns: "./data/corpus/syndrome_patterns"
+  
+  # 知识库设置
+  knowledge_base:
+    primary_source: "shanghan_lun"  # 伤寒论
+    secondary_sources:
+      - "jingui_yaolue"             # 金匮要略
+      - "wenbing_tiaobian"          # 温病条辨
+    
+    # 收录的证型类别
+    syndrome_categories:
+      - "六经辨证"
+      - "八纲辨证"
+      - "脏腑辨证"
+    
+    # 收录的方剂数量
+    formula_count: 100
+    
+  # 思维链生成设置
+  cot_generation:
+    min_reasoning_steps: 3
+    max_reasoning_steps: 6
+    include_classical_reference: true
+    reference_language: "classical_chinese"  # 引用使用文言文
+    
+  # 质量控制
+  quality_control:
+    min_expert_validations: 2
+    min_validation_score: 0.8
+    auto_reject_threshold: 0.5
+
+# 临床验证配置
+clinical_validation:
+  # 研究设计
+  study_design:
+    type: "mixed"  # retrospective + prospective
+    blinding: "single_blind"
+    
+  # 样本量计算
+  sample_size:
+    target: 200
+    power: 0.80
+    alpha: 0.05
+    expected_effect_size: 0.5
+    
+  # 评估者要求
+  evaluator_requirements:
+    min_title: "副主任医师"
+    min_experience_years: 10
+    specialty: "中医内科"
+    
+  # 评估指标
+  metrics:
+    primary:
+      - "syndrome_accuracy"
+      - "cohens_kappa"
+    secondary:
+      - "clinical_acceptability"
+      - "reasoning_quality"
+      - "classical_reference_accuracy"
+      
+  # 亚组分析
+  subgroup_analysis:
+    by_syndrome: true
+    by_age_group: true
+    by_disease_category: true
+
+# 输出设置
+output:
+  # 论文准备
+  publication:
+    target_journals:
+      - "JAMIA"
+      - "BMC Medical Informatics"
+      - "International Journal of Medical Informatics"
+    
+    # 结果格式
+    result_format:
+      confidence_interval: "95%"
+      decimal_places: 3
+      effect_size_report: true
+      
+  # 数据导出
+  export:
+    formats:
+      - "json"
+      - "csv"
+      - "latex"
+    include_raw_data: false
+    anonymize: true

@@ -1,0 +1,193 @@
+{
+    "cot_id": "sample_002",
+    "version": "1.0",
+    "created_at": "2026-01-11T10:30:00",
+    "patient_demographics": {
+        "age": 52,
+        "gender": "女",
+        "occupation": "家务"
+    },
+    "chief_complaint": "四肢厥冷、腹泻3天，精神萎靡",
+    "diagnostic_evidence": [
+        {
+            "method": "望诊",
+            "observation": "面色㿠白，精神萎靡",
+            "clinical_significance": "阳气衰微之象",
+            "confidence": 0.90
+        },
+        {
+            "method": "问诊",
+            "observation": "四肢厥冷，恶寒蜷卧",
+            "clinical_significance": "阳虚不能温煦四末",
+            "confidence": 0.95
+        },
+        {
+            "method": "问诊",
+            "observation": "腹泻清稀，完谷不化",
+            "clinical_significance": "脾肾阳虚，运化失司",
+            "confidence": 0.90
+        },
+        {
+            "method": "问诊",
+            "observation": "口不渴，喜热饮",
+            "clinical_significance": "里寒证表现",
+            "confidence": 0.85
+        },
+        {
+            "method": "切诊",
+            "observation": "脉微细欲绝",
+            "clinical_significance": "阳气衰微，脉道不充",
+            "confidence": 0.95
+        }
+    ],
+    "pulse_grid": {
+        "left_cun": {
+            "浮": "无",
+            "中": "微弱",
+            "沉": "几无"
+        },
+        "left_guan": {
+            "浮": "无",
+            "中": "微细",
+            "沉": "弱"
+        },
+        "left_chi": {
+            "浮": "无",
+            "中": "微",
+            "沉": "几无"
+        },
+        "right_cun": {
+            "浮": "无",
+            "中": "微弱",
+            "沉": "弱"
+        },
+        "right_guan": {
+            "浮": "无",
+            "中": "微细",
+            "沉": "弱"
+        },
+        "right_chi": {
+            "浮": "无",
+            "中": "微",
+            "沉": "几无"
+        },
+        "overall_assessment": "六脉微细欲绝",
+        "pulse_features": [
+            "微",
+            "细"
+        ],
+        "diagnostic_suggestion": "少阴寒化证，阳气衰微"
+    },
+    "reasoning_steps": [
+        {
+            "step_number": 1,
+            "reasoning_type": "归纳",
+            "premise": "患者四肢厥冷、腹泻清稀、精神萎靡、脉微细",
+            "inference": "四肢厥冷为阳虚不达四末；腹泻清稀、完谷不化为脾肾阳虚；脉微细为阳气衰微、脉道不充",
+            "conclusion": "四诊合参，提示阳气衰微的危重证候",
+            "classical_reference": "《伤寒论》：少阴之为病，脉微细，但欲寐也",
+            "confidence": 0.93
+        },
+        {
+            "step_number": 2,
+            "reasoning_type": "演绎",
+            "premise": "脉微细、但欲寐、四肢厥逆",
+            "inference": "根据《伤寒论》第281条：少阴之为病，脉微细，但欲寐也。今患者精神萎靡，脉微细欲绝，四肢厥冷，符合少阴病提纲。又有下利清谷，为少阴寒化之征",
+            "conclusion": "辨证为少阴寒化证",
+            "classical_reference": "《伤寒论》第281条、第323条",
+            "confidence": 0.94
+        },
+        {
+            "step_number": 3,
+            "reasoning_type": "演绎",
+            "premise": "少阴寒化证，心肾阳衰，阴寒内盛",
+            "inference": "少阴病寒化，阳气衰微，急需回阳救逆。《伤寒论》第323条：少阴病，脉沉者，急温之，宜四逆汤",
+            "conclusion": "治法确定为：回阳救逆，温中祛寒",
+            "classical_reference": "《伤寒论》第323条",
+            "confidence": 0.95
+        },
+        {
+            "step_number": 4,
+            "reasoning_type": "类比",
+            "premise": "治法为回阳救逆，需用大辛大热之品",
+            "inference": "四逆汤为少阴寒化证之主方，由附子、干姜、甘草组成，功专回阳救逆",
+            "conclusion": "选方四逆汤",
+            "classical_reference": "《伤寒论》第323条",
+            "confidence": 0.96
+        }
+    ],
+    "syndrome_differentiation": {
+        "primary_syndrome": "少阴病",
+        "secondary_syndromes": [
+            "里证",
+            "寒证",
+            "虚证"
+        ],
+        "evidence_summary": "四肢厥冷、腹泻清稀、脉微细欲绝，符合少阴寒化证",
+        "key_symptoms": [
+            "四肢厥冷",
+            "腹泻清稀",
+            "精神萎靡",
+            "恶寒蜷卧"
+        ],
+        "key_signs": [
+            "脉微细欲绝",
+            "面色㿠白"
+        ],
+        "six_meridian_analysis": "病在少阴，心肾阳衰，阴寒内盛",
+        "pathomechanism": "心肾阳衰，阴寒内盛，阳不达四末则厥，脾失温煦则利",
+        "classical_clause": "少阴之为病，脉微细，但欲寐也",
+        "classical_source": "《伤寒论》第281条"
+    },
+    "treatment_principle": {
+        "primary_principle": "回阳救逆",
+        "secondary_principles": [
+            "温中祛寒"
+        ],
+        "rationale": "少阴寒化，阳气衰微至极，非大剂回阳不能救逆",
+        "contraindications": [
+            "阴虚火旺者禁用",
+            "热证厥逆者禁用"
+        ],
+        "classical_reference": "《伤寒论》：少阴病，脉沉者，急温之"
+    },
+    "prescription": {
+        "formula_name": "四逆汤",
+        "formula_source": "《伤寒论》",
+        "formula_analysis": "本方以附子大辛大热为君，回阳救逆；干姜辛热为臣，温中散寒，助附子回阳；甘草和中缓急，调和诸药。三药相合，共奏回阳救逆、温中祛寒之功",
+        "herbs": [
+            {
+                "name": "附子（制）",
+                "dosage": "15g",
+                "role": "君",
+                "function": "回阳救逆，补火助阳",
+                "rationale": "纯阳之品，能上助心阳，中温脾阳，下补肾阳"
+            },
+            {
+                "name": "干姜",
+                "dosage": "9g",
+                "role": "臣",
+                "function": "温中散寒，回阳通脉",
+                "rationale": "守而不走，温中焦之阳，助附子回阳"
+            },
+            {
+                "name": "甘草（炙）",
+                "dosage": "6g",
+                "role": "佐使",
+                "function": "补益脾气，调和诸药",
+                "rationale": "缓附子之峻烈，使回阳而不伤正"
+            }
+        ],
+        "compatibility_analysis": "附子与干姜相须，增强回阳救逆之力；甘草调和，使药力持久而不峻猛",
+        "modifications": [
+            "若呕吐加半夏以止呕",
+            "若腹痛加白芍以缓急"
+        ],
+        "modification_rationale": "根据兼症加减"
+    },
+    "expected_outcome": "服药后四肢渐温，精神好转，腹泻减少，脉象有力",
+    "follow_up_plan": "密切观察病情变化，若四肢回温、脉象有力，可减量续服巩固；若无改善，需加大附子用量",
+    "expert_validated": true,
+    "validation_score": 0.94,
+    "validator_comments": "少阴寒化证辨证准确，四逆汤选方正确，体现郑钦安火神派学术思想"
+}

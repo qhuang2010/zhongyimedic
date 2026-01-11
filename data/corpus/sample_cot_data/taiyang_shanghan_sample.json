@@ -1,0 +1,157 @@
+{
+  "cot_id": "sample_001",
+  "version": "1.0",
+  "created_at": "2026-01-11T10:00:00",
+  
+  "patient_demographics": {
+    "age": 45,
+    "gender": "男",
+    "occupation": "办公室职员"
+  },
+  
+  "chief_complaint": "恶寒发热、头痛身痛2天",
+  
+  "diagnostic_evidence": [
+    {
+      "method": "问诊",
+      "observation": "恶寒发热，无汗",
+      "clinical_significance": "表实证，寒邪束表",
+      "confidence": 0.95
+    },
+    {
+      "method": "问诊", 
+      "observation": "头痛、身体疼痛、骨节酸痛",
+      "clinical_significance": "寒邪阻络，气血不畅",
+      "confidence": 0.90
+    },
+    {
+      "method": "问诊",
+      "observation": "轻微喘促",
+      "clinical_significance": "肺气不宣",
+      "confidence": 0.85
+    },
+    {
+      "method": "切诊",
+      "observation": "脉浮紧",
+      "clinical_significance": "浮主表证，紧主寒邪束表",
+      "confidence": 0.95
+    }
+  ],
+  
+  "pulse_grid": {
+    "left_cun": {"浮": "有力", "中": "中等", "沉": "弱"},
+    "left_guan": {"浮": "紧", "中": "中等", "沉": "弱"},
+    "left_chi": {"浮": "紧", "中": "中等", "沉": "弱"},
+    "right_cun": {"浮": "紧有力", "中": "中等", "沉": "弱"},
+    "right_guan": {"浮": "紧", "中": "中等", "沉": "弱"},
+    "right_chi": {"浮": "紧", "中": "中等", "沉": "弱"},
+    "overall_assessment": "六脉俱浮紧",
+    "pulse_features": ["浮", "紧"],
+    "diagnostic_suggestion": "太阳伤寒表实证"
+  },
+  
+  "reasoning_steps": [
+    {
+      "step_number": 1,
+      "reasoning_type": "归纳",
+      "premise": "患者恶寒发热、无汗、头身疼痛、脉浮紧",
+      "inference": "恶寒发热提示外感表证；无汗提示腠理闭塞，为表实证；头身疼痛为寒邪阻络；脉浮主表，紧主寒",
+      "conclusion": "四诊合参，符合外感风寒表实证特征",
+      "classical_reference": "《伤寒论》：太阳之为病，脉浮，头项强痛而恶寒",
+      "confidence": 0.92
+    },
+    {
+      "step_number": 2,
+      "reasoning_type": "演绎",
+      "premise": "具备太阳病主症：恶寒、发热、头痛、身痛、无汗、脉浮紧",
+      "inference": "根据《伤寒论》第3条：太阳病，或已发热，或未发热，必恶寒，体痛，呕逆，脉阴阳俱紧者，名为伤寒。今患者恶寒发热、无汗、身痛、脉浮紧，符合太阳伤寒证诊断标准",
+      "conclusion": "辨证为太阳伤寒证（表实证）",
+      "classical_reference": "《伤寒论》第3条",
+      "confidence": 0.95
+    },
+    {
+      "step_number": 3,
+      "reasoning_type": "演绎",
+      "premise": "太阳伤寒证，病机为风寒束表，卫阳被郁，营阴郁滞",
+      "inference": "寒邪束表，腠理闭塞，当用辛温发汗之法以解表散寒；肺气不宣有喘促，当宣肺平喘",
+      "conclusion": "治法确定为：发汗解表，宣肺平喘",
+      "classical_reference": "《伤寒论》：其在皮者，汗而发之",
+      "confidence": 0.93
+    },
+    {
+      "step_number": 4,
+      "reasoning_type": "类比",
+      "premise": "治法为发汗解表、宣肺平喘，需选用辛温解表之方",
+      "inference": "《伤寒论》第35条：太阳病，头痛发热，身疼腰痛，骨节疼痛，恶风无汗而喘者，麻黄汤主之。今患者症状与此条文高度吻合",
+      "conclusion": "选方麻黄汤",
+      "classical_reference": "《伤寒论》第35条",
+      "confidence": 0.96
+    }
+  ],
+  
+  "syndrome_differentiation": {
+    "primary_syndrome": "太阳病",
+    "secondary_syndromes": ["表证", "寒证", "实证"],
+    "evidence_summary": "恶寒发热、无汗、头身疼痛、脉浮紧，符合太阳伤寒表实证",
+    "key_symptoms": ["恶寒", "发热", "无汗", "头痛", "身痛", "喘"],
+    "key_signs": ["脉浮紧"],
+    "six_meridian_analysis": "病在太阳经，寒邪束表，卫阳被郁",
+    "pathomechanism": "风寒袭表，卫阳被郁，营阴郁滞，肺气不宣",
+    "classical_clause": "太阳病，或已发热，或未发热，必恶寒，体痛，呕逆，脉阴阳俱紧者，名为伤寒",
+    "classical_source": "《伤寒论》第3条"
+  },
+  
+  "treatment_principle": {
+    "primary_principle": "发汗解表",
+    "secondary_principles": ["宣肺平喘", "散寒止痛"],
+    "rationale": "寒邪束表，腠理闭塞，非发汗不能解；肺气不宣，喘促难平，当宣肺解表",
+    "contraindications": ["表虚自汗者不宜", "阳虚体弱者慎用"],
+    "classical_reference": "《伤寒论》：其在皮者，汗而发之"
+  },
+  
+  "prescription": {
+    "formula_name": "麻黄汤",
+    "formula_source": "《伤寒论》",
+    "formula_analysis": "本方以麻黄为君药，发汗解表，宣肺平喘；桂枝为臣药，温经散寒，助麻黄发汗；杏仁为佐药，降气平喘；甘草为使药，调和诸药。全方共奏发汗解表、宣肺平喘之功",
+    "herbs": [
+      {
+        "name": "麻黄",
+        "dosage": "9g",
+        "role": "君",
+        "function": "发汗解表，宣肺平喘",
+        "rationale": "主治风寒表实证之要药，发汗力强"
+      },
+      {
+        "name": "桂枝",
+        "dosage": "6g",
+        "role": "臣",
+        "function": "温经散寒，助阳化气",
+        "rationale": "助麻黄发汗解表，温通经脉止痛"
+      },
+      {
+        "name": "杏仁",
+        "dosage": "9g",
+        "role": "佐",
+        "function": "降气平喘，润肠通便",
+        "rationale": "降利肺气，与麻黄相配，一宣一降"
+      },
+      {
+        "name": "甘草",
+        "dosage": "3g",
+        "role": "使",
+        "function": "调和诸药，缓急止痛",
+        "rationale": "调和诸药，缓麻黄、桂枝之峻烈"
+      }
+    ],
+    "compatibility_analysis": "麻黄与桂枝相须，增强发汗解表之力；麻黄与杏仁相使，宣降相合，恢复肺气宣降功能",
+    "modifications": [],
+    "modification_rationale": "症状典型，无需加减"
+  },
+  
+  "expected_outcome": "服药后当微微汗出，身热退，恶寒解，头身疼痛减轻，喘促平息",
+  "follow_up_plan": "服药后覆被取汗，汗出后勿见风，食清淡易消化之物。若一剂不解，可再服一剂",
+  
+  "expert_validated": true,
+  "validation_score": 0.95,
+  "validator_comments": "辨证准确，推理过程清晰，经典引用恰当，方药选择合理"
+}

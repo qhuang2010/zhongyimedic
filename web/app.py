@@ -18,6 +18,17 @@ from src.data_preparation.validator import DataValidator
 from src.database.connection import engine, Base, get_db
 from src.database.models import Patient, MedicalRecord
 
+# Chain-of-Thought and Evaluation modules
+try:
+    from src.corpus.cot_generator import generate_chain_of_thought
+    from src.corpus.knowledge_base import knowledge_base
+    from src.evaluation.metrics import MetricsCalculator, EvaluationResult
+    from src.evaluation.validation_framework import validation_framework
+    COT_MODULES_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: CoT modules not fully available: {e}")
+    COT_MODULES_AVAILABLE = False
+
 # Create tables if they don't exist
 # Note: In production, use Alembic for migrations
 try:
@@ -501,6 +512,176 @@ async def search_similar_records(data: Dict[str, Any], db: Session = Depends(get
     results.sort(key=lambda x: x["score"], reverse=True)
     
     return results[:5] # Return top 5
+
+
+# ============================================================
+# Chain-of-Thought API Endpoints (Medical Informatics Journal)
+# ============================================================
+
+@app.post("/api/generate-cot")
+async def generate_cot_endpoint(data: Dict[str, Any]):
+    """
+    Generate Chain-of-Thought reasoning from clinical data.
+    
+    This is the core innovation endpoint for JAMIA/BMC publication.
+    Generates structured, explainable diagnostic reasoning with classical references.
+    """
+    if not COT_MODULES_AVAILABLE:
+        raise HTTPException(
+            status_code=503, 
+            detail="Chain-of-Thought modules not available"
+        )
+    
+    try:
+        pulse_grid = data.get("pulse_grid", {})
+        symptoms = data.get("symptoms", [])
+        chief_complaint = data.get("chief_complaint", "")
+        patient_info = data.get("patient_info", {})
+        
+        if not chief_complaint:
+            raise HTTPException(status_code=400, detail="Chief complaint is required")
+        
+        # Generate Chain-of-Thought
+        cot = generate_chain_of_thought(
+            pulse_grid_data=pulse_grid,
+            symptoms=symptoms,
+            chief_complaint=chief_complaint,
+            patient_info=patient_info
+        )
+        
+        return {
+            "status": "success",
+            "chain_of_thought": cot.to_dict()
+        }
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/evaluate")
+async def evaluate_diagnosis_endpoint(data: Dict[str, Any]):
+    """
+    Evaluate AI diagnosis against expert ground truth.
+    
+    Used for clinical validation studies.
+    Returns accuracy metrics and consistency scores.
+    """
+    if not COT_MODULES_AVAILABLE:
+        raise HTTPException(
+            status_code=503, 
+            detail="Evaluation modules not available"
+        )
+    
+    try:
+        ai_syndrome = data.get("ai_syndrome", "")
+        expert_syndrome = data.get("expert_syndrome", "")
+        ai_formula = data.get("ai_formula", "")
+        expert_formula = data.get("expert_formula", "")
+        acceptability_score = data.get("acceptability_score", 3)
+        
+        # Create evaluation result
+        result = EvaluationResult(
+            case_id=data.get("case_id", "unknown"),
+            predicted_syndrome=ai_syndrome,
+            actual_syndrome=expert_syndrome,
+            predicted_formula=ai_formula,
+            actual_formula=expert_formula,
+            acceptability_score=acceptability_score
+        )
+        
+        # Calculate metrics
+        syndrome_match = ai_syndrome == expert_syndrome
+        formula_match = ai_formula == expert_formula
+        
+        return {
+            "status": "success",
+            "evaluation": {
+                "syndrome_correct": syndrome_match,
+                "formula_correct": formula_match,
+                "acceptability_score": acceptability_score,
+                "overall_assessment": "acceptable" if acceptability_score >= 3 else "unacceptable"
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/corpus/stats")
+async def get_corpus_stats():
+    """
+    Get statistics about the TCM Chain-of-Thought corpus.
+    
+    Returns counts of syndromes, formulas, and classical references.
+    """
+    if not COT_MODULES_AVAILABLE:
+        raise HTTPException(
+            status_code=503, 
+            detail="Corpus modules not available"
+        )
+    
+    try:
+        stats = {
+            "corpus_name": "TCM-CoT-Corpus",
+            "version": "1.0.0",
+            "knowledge_base": {
+                "classical_clauses": len(knowledge_base.clauses),
+                "formulas": len(knowledge_base.formulas),
+                "six_meridian_patterns": len(knowledge_base.six_meridian),
+                "herb_compatibility_rules": sum(
+                    len(rules) for rules in knowledge_base.herb_rules.values()
+                )
+            },
+            "available_syndromes": [
+                "太阳病", "阳明病", "少阳病", 
+                "太阴病", "少阴病", "厥阴病"
+            ],
+            "sample_formulas": list(knowledge_base.formulas.keys())[:5]
+        }
+        
+        return stats
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/knowledge/formula/{formula_name}")
+async def get_formula_details(formula_name: str):
+    """
+    Get detailed information about a specific formula.
+    """
+    if not COT_MODULES_AVAILABLE:
+        raise HTTPException(
+            status_code=503, 
+            detail="Knowledge base modules not available"
+        )
+    
+    formula = knowledge_base.get_formula(formula_name)
+    if not formula:
+        raise HTTPException(status_code=404, detail=f"Formula '{formula_name}' not found")
+    
+    return formula
+
+
+@app.get("/api/knowledge/clause/{clause_id}")
+async def get_clause_details(clause_id: str):
+    """
+    Get a specific classical clause from Shanghan Lun.
+    """
+    if not COT_MODULES_AVAILABLE:
+        raise HTTPException(
+            status_code=503, 
+            detail="Knowledge base modules not available"
+        )
+    
+    clause = knowledge_base.get_clause(clause_id)
+    if not clause:
+        raise HTTPException(status_code=404, detail=f"Clause '{clause_id}' not found")
+    
+    return clause
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
