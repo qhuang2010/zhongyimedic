@@ -1,0 +1,10 @@
+{
+  "source_theories": 36,
+  "source_cases": 77,
+  "generated_prompts": {
+    "alpaca": 145,
+    "cot": 32,
+    "conversations": 66
+  },
+  "generated_at": "2026-01-11 13:23:15"
+}
