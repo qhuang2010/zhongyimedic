@@ -1,6 +1,6 @@
 import React from 'react';
 
-const PatientInfo = ({ data, onChange }) => {
+const PatientInfo = ({ data, onChange, onNewPatient, onDelete }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     onChange({ ...data, [name]: value });
@@ -8,35 +8,69 @@ const PatientInfo = ({ data, onChange }) => {
 
   return (
     <div className="patient-info-section">
-      <div className="section-title">患者基本信息</div>
+      <div className="section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>患者基本信息</span>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={onNewPatient}
+            style={{
+              backgroundColor: '#34c759', // Green for "New"
+              color: 'white',
+              border: 'none',
+              borderRadius: '15px',
+              padding: '4px 12px',
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              fontWeight: '500'
+            }}
+          >
+            + 新增患者
+          </button>
+          <button
+            onClick={onDelete}
+            style={{
+              backgroundColor: '#ff3b30', // Red for "Delete"
+              color: 'white',
+              border: 'none',
+              borderRadius: '15px',
+              padding: '4px 12px',
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              fontWeight: '500'
+            }}
+          >
+            删除
+          </button>
+        </div>
+      </div>
       <div className="form-row" style={{ display: 'flex', gap: '15px' }}>
         <div className="form-group" style={{ flex: 1.5 }}>
           <label>姓名</label>
-          <input 
-            type="text" 
+          <input
+            type="text"
             name="name"
-            className="form-control" 
-            placeholder="请输入姓名" 
+            className="form-control"
+            placeholder="请输入姓名"
             value={data.name}
             onChange={handleChange}
           />
         </div>
         <div className="form-group" style={{ flex: 0.8 }}>
           <label>年龄</label>
-          <input 
-            type="number" 
+          <input
+            type="number"
             name="age"
-            className="form-control" 
-            placeholder="岁" 
+            className="form-control"
+            placeholder="岁"
             value={data.age}
             onChange={handleChange}
           />
         </div>
         <div className="form-group" style={{ flex: 0.8 }}>
           <label>性别</label>
-          <select 
+          <select
             name="gender"
-            className="form-control" 
+            className="form-control"
             value={data.gender || '男'}
             onChange={handleChange}
           >
@@ -46,11 +80,11 @@ const PatientInfo = ({ data, onChange }) => {
         </div>
         <div className="form-group" style={{ flex: 1.5 }}>
           <label>电话号码</label>
-          <input 
-            type="tel" 
+          <input
+            type="tel"
             name="phone"
-            className="form-control" 
-            placeholder="请输入电话号码" 
+            className="form-control"
+            placeholder="请输入电话号码"
             value={data.phone || ''}
             onChange={handleChange}
           />

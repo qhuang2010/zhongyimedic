@@ -80,6 +80,45 @@ async def search_patients(
         for p in patients
     ]
 
+@app.get("/api/patients/by_date")
+async def get_patients_by_date(
+    date: str = Query(..., description="Date in YYYY-MM-DD format"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get patients who had a medical record on a specific date
+    """
+    try:
+        from sqlalchemy import func
+        target_date = datetime.strptime(date, "%Y-%m-%d").date()
+        
+        # Query MedicalRecords for that date, join with Patient
+        records = db.query(MedicalRecord).join(Patient).filter(
+            func.date(MedicalRecord.visit_date) == target_date
+        ).all()
+        
+        # Deduplicate patients
+        seen_patients = set()
+        result_patients = []
+        
+        for r in records:
+            p = r.patient
+            if p.id not in seen_patients:
+                seen_patients.add(p.id)
+                result_patients.append({
+                    "id": p.id,
+                    "name": p.name,
+                    "gender": p.gender,
+                    "age": p.age,
+                    "phone": p.phone,
+                    "last_visit": r.visit_date.strftime("%Y-%m-%d")
+                })
+                
+        return result_patients
+        
+    except ValueError:
+         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
 @app.get("/api/patients/{patient_id}/latest_record")
 async def get_patient_latest_record(patient_id: int, db: Session = Depends(get_db)):
     """
@@ -95,6 +134,7 @@ async def get_patient_latest_record(patient_id: int, db: Session = Depends(get_d
         .first()
         
     response_data = {
+        "record_id": latest_record.id if latest_record else None,
         "patient_info": {
             "name": patient.name,
             "age": patient.age,
@@ -155,6 +195,20 @@ async def get_record(record_id: int, db: Session = Depends(get_db)):
             response_data["pulse_grid"] = record_data["pulse_grid"]
             
     return response_data
+
+@app.delete("/api/records/{record_id}")
+async def delete_record(record_id: int, db: Session = Depends(get_db)):
+    """
+    Delete a specific medical record
+    """
+    record = db.query(MedicalRecord).filter(MedicalRecord.id == record_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+        
+    db.delete(record)
+    db.commit()
+    
+    return {"status": "success", "message": f"Record {record_id} deleted"}
 
 from datetime import datetime, date
 
@@ -235,7 +289,11 @@ async def save_record(data: Dict[str, Any], db: Session = Depends(get_db)):
         record_data = {
             "medical_record": medical_info,
             "pulse_grid": data.get("pulse_grid", {}),
-            "raw_input": data
+            "raw_input": data,
+            "client_info": { # New field for mode and teacher
+                "mode": data.get("mode", "personal"),
+                "teacher": data.get("teacher", "")
+            }
         }
         
         if existing_record:
@@ -345,13 +403,13 @@ async def analyze_record(data: Dict[str, Any]):
     if is_deep_empty and (check_keywords(fu_qualities, ["大", "浮", "紧", "弦", "细"])):
         pattern = "Rootless Yang"
         consistency_comment = (
-            "【郑钦安视角】脉象呈现“寸关尺浮取可见，但沉取无力或空虚”，此乃“阳气外浮，下元虚寒”之象。\n"
-            "虽浮部见紧或细，切不可误认为单纯表实证。沉取无根，说明肾阳虚衰，真阳不能潜藏，反逼虚阳上浮外越。\n"
+            "【郑钦安视角】脉象呈现“寸关尺浮取可见，但沉取无力或空虚”，此乃“阳气外浮，下元虚寒”之象。\\n"
+            "虽浮部见紧或细，切不可误认为单纯表实证。沉取无根，说明肾阳虚衰，真阳不能潜藏，反逼虚阳上浮外越。\\n"
             "若主诉有“头晕、面红”等看似热象，实为“真寒假热”。"
         )
         suggestion = (
-            "建议：急当扶阳抑阴，引火归元。\n"
-            "切忌使用发散风寒之辛温解表药（如麻黄）或苦寒直折之药，恐耗散仅存之真阳。\n"
+            "建议：急当扶阳抑阴，引火归元。\\n"
+            "切忌使用发散风寒之辛温解表药（如麻黄）或苦寒直折之药，恐耗散仅存之真阳。\\n"
             "推荐方剂：四逆汤、白通汤或潜阳丹加减。"
         )
         
@@ -360,13 +418,13 @@ async def analyze_record(data: Dict[str, Any]):
     elif is_floating_tight and not is_deep_empty:
         pattern = "Taiyang Cold"
         consistency_comment = (
-            "【伤寒论视角】脉浮而紧，乃太阳伤寒表实证之典型脉象。\n"
-            "“寸口脉浮而紧，浮则为风，紧则为寒”，寒邪束表，卫阳闭郁。\n"
+            "【伤寒论视角】脉浮而紧，乃太阳伤寒表实证之典型脉象。\\n"
+            "“寸口脉浮而紧，浮则为风，紧则为寒”，寒邪束表，卫阳闭郁。\\n"
             "若主诉伴有“恶寒、发热、身痛、无汗”，则脉证高度一致。"
         )
         suggestion = (
-            "建议：辛温解表，发汗宣肺。\n"
-            "推荐方剂：麻黄汤加减。\n"
+            "建议：辛温解表，发汗宣肺。\\n"
+            "推荐方剂：麻黄汤加减。\\n"
             "注意：若患者素体汗多或尺脉迟弱，需防过汗伤阳，可考虑桂枝汤或桂枝加葛根汤。"
         )
 
@@ -374,11 +432,11 @@ async def analyze_record(data: Dict[str, Any]):
     elif is_middle_empty:
         pattern = "Middle Deficiency"
         consistency_comment = (
-            "【脉象分析】关部（中候）见空/弱，提示中焦脾胃之气虚损。\n"
+            "【脉象分析】关部（中候）见空/弱，提示中焦脾胃之气虚损。\\n"
             "脾胃为后天之本，中气不足则生化无源。"
         )
         suggestion = (
-            "建议：健脾益气，调和中焦。\n"
+            "建议：健脾益气，调和中焦。\\n"
             "推荐方剂：理中汤或补中益气汤加减。"
         )
         
@@ -386,7 +444,7 @@ async def analyze_record(data: Dict[str, Any]):
         # Default / Fallback
         consistency_comment = (
             "脉象显示：浮部" + "/".join([q for q in fu_qualities if q]) + 
-            "，沉部" + "/".join([q for q in chen_qualities if q]) + "。\n"
+            "，沉部" + "/".join([q for q in chen_qualities if q]) + "。\\n"
             "需结合“望闻问切”四诊合参。若浮沉皆无力，多属气血两虚；若脉象有力，多属实证。"
         )
         suggestion = "建议结合舌苔及其他临床症状进一步辨证。"
@@ -428,79 +486,136 @@ async def analyze_record(data: Dict[str, Any]):
 async def search_similar_records(data: Dict[str, Any], db: Session = Depends(get_db)):
     """
     Search for similar medical records based on pulse grid data
+    Updated: Supports single-hand matching against both hands of candidates
     """
     current_grid = data.get("pulse_grid", {})
     if not current_grid:
         return []
         
     # Get all records to compare (in production, use vector search or more efficient filtering)
-    # For now, we fetch latest 100 records to compare
     candidates = db.query(MedicalRecord).order_by(MedicalRecord.created_at.desc()).limit(100).all()
     
     results = []
-    # Expanded grid keys for 18 positions (plus legacy support)
+    
+    # 1. Analyze Input Structure
     base_positions = [
         "cun-fu", "guan-fu", "chi-fu",
         "cun-zhong", "guan-zhong", "chi-zhong",
         "cun-chen", "guan-chen", "chi-chen"
     ]
     
-    grid_keys = []
-    # Add left/right versions
-    for pos in base_positions:
-        grid_keys.append(f"left-{pos}")
-        grid_keys.append(f"right-{pos}")
-        # Add legacy version just in case
-        grid_keys.append(pos)
+    has_left = any(current_grid.get(f"left-{p}") for p in base_positions)
+    has_right = any(current_grid.get(f"right-{p}") for p in base_positions)
+    
+    # Determine Matching Strategy
+    # Strategy: 
+    # - If both hands present: Match Left-Left AND Right-Right (Original logic)
+    # - If only one hand (e.g. Left): Match InputLeft-CandLeft AND InputLeft-CandRight, take MAX score
+    
+    single_hand_mode = (has_left and not has_right) or (has_right and not has_left)
+    input_hand_prefix = "left-" if (has_left and not has_right) else "right-" if (has_right and not has_left) else None
     
     for record in candidates:
         if not record.data or "pulse_grid" not in record.data:
             continue
             
         candidate_grid = record.data["pulse_grid"]
-        score = 0
-        matches = []
         
-        # 1. Compare 9-grid keys
-        for key in grid_keys:
-            val1 = current_grid.get(key, "").strip()
-            val2 = candidate_grid.get(key, "").strip()
+        # Helper to calculate score between two sets of keys
+        def calculate_score(prefix_a, prefix_b):
+            sc = 0
+            m = []
+            for pos in base_positions:
+                key_a = f"{prefix_a}{pos}"
+                key_b = f"{prefix_b}{pos}"
+                
+                # Also support legacy keys (no prefix) for candidate
+                val_a = current_grid.get(key_a, "").strip()
+                
+                # Candidate might have prefix or legacy
+                val_b = candidate_grid.get(key_b, "").strip()
+                if not val_b and not prefix_b: # Try legacy if prefix_b is empty string (meaning generic match intended? No, logic below)
+                     pass 
+
+                # Actually, let's normalize candidate fetching
+                # If we are comparing to Candidate Left, we check "left-{pos}"
+                # If Candidate has no "left-", maybe it has legacy "{pos}"? 
+                # Let's assume legacy data is Generic.
+                
+                real_val_b = val_b
+                if not real_val_b:
+                    # Fallback to legacy key if prefix_b corresponds to a side but data is legacy generic
+                    legacy_key = pos
+                    real_val_b = candidate_grid.get(legacy_key, "").strip()
+
+                if val_a and real_val_b:
+                    if val_a == real_val_b:
+                        sc += 10
+                        m.append(f"{key_a}=={key_b if val_b else legacy_key}")
+                    elif val_a in real_val_b or real_val_b in val_a:
+                        sc += 5
+                        m.append(f"{key_a}~={key_b if val_b else legacy_key}")
+            return sc, m
+
+        final_score = 0
+        final_matches = []
+
+        if single_hand_mode and input_hand_prefix:
+            # Single Hand Matching
+            # Compare Input vs Candidate Left
+            score_l, matches_l = calculate_score(input_hand_prefix, "left-")
+            # Compare Input vs Candidate Right
+            score_r, matches_r = calculate_score(input_hand_prefix, "right-")
             
-            if val1 and val2:
-                if val1 == val2:
-                    score += 10 # Exact match
-                    matches.append(key)
-                elif val1 in val2 or val2 in val1:
-                    score += 5 # Partial match
-                    matches.append(key)
-        
+            if score_l >= score_r:
+                final_score = score_l
+                final_matches = matches_l
+            else:
+                final_score = score_r
+                final_matches = matches_r
+        else:
+            # Dual Hand Matching (Standard)
+            score_l, matches_l = calculate_score("left-", "left-")
+            score_r, matches_r = calculate_score("right-", "right-")
+            
+            # Also check Legacy/Generic keys if explicit sides missing in candidate?
+            # Existing logic did exact key matching.
+            # Let's keep it simple: Add scores up
+            final_score = score_l + score_r
+            final_matches = matches_l + matches_r
+            
+            # Legacy generic keys matching (if input has them? Input usually is standardized now)
+            # If input has 'cun-fu' (legacy), match with 'cun-fu'
+            score_g, matches_g = calculate_score("", "")
+            final_score += score_g
+            final_matches.extend(matches_g)
+
         # 2. Compare overall description
         overall1 = current_grid.get("overall_description", "").strip()
         overall2 = candidate_grid.get("overall_description", "").strip()
         if overall1 and overall2:
-            # Simple keyword overlap (Jaccard-ish)
             set1 = set(overall1)
             set2 = set(overall2)
             overlap = len(set1.intersection(set2))
             if overlap > 0:
-                score += overlap * 2
+                final_score += overlap * 2
                 
-        if score > 0:
+        if final_score > 0:
             patient = record.patient
             results.append({
                 "record_id": record.id,
                 "patient_name": patient.name if patient else "Unknown",
                 "visit_date": record.visit_date.strftime("%Y-%m-%d"),
-                "score": score,
+                "score": final_score,
                 "pulse_grid": candidate_grid,
-                "matches": matches,
+                "matches": final_matches,
                 "complaint": record.complaint
             })
             
     # Sort by score desc
     results.sort(key=lambda x: x["score"], reverse=True)
     
-    return results[:5] # Return top 5
+    return results[:5]
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
