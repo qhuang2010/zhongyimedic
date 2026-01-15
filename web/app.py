@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
+from uuid import uuid4
 import uvicorn
 from pypinyin import lazy_pinyin, Style
 
@@ -16,7 +17,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.data_preparation.validator import DataValidator
 from src.database.connection import engine, Base, get_db
-from src.database.models import Patient, MedicalRecord
+from src.database.models import Patient, MedicalRecord, Practitioner
+from uuid import uuid4
 
 # Create tables if they don't exist
 # Note: In production, use Alembic for migrations
@@ -154,6 +156,18 @@ async def get_patient_latest_record(patient_id: int, db: Session = Depends(get_d
             
     return response_data
 
+@app.get("/api/practitioners")
+async def get_practitioners(db: Session = Depends(get_db)):
+    """
+    Get all practitioners (teachers and doctors)
+    """
+    practitioners = db.query(Practitioner).all()
+    return [{
+        "id": p.id,
+        "name": p.name,
+        "role": p.role
+    } for p in practitioners]
+
 @app.get("/api/patients/{patient_id}/history")
 async def get_patient_history(patient_id: int, db: Session = Depends(get_db)):
     """
@@ -285,14 +299,32 @@ async def save_record(data: Dict[str, Any], db: Session = Depends(get_db)):
         # Relational Skeleton
         complaint = medical_info.get("complaint")
         
+        # Practitioner Binding Logic
+        mode = data.get("mode", "personal")
+        teacher_name = data.get("teacher", "")
+        practitioner_id = None
+        
+        if mode == "personal":
+            # Find default doctor
+            doc = db.query(Practitioner).filter(Practitioner.role == "doctor").first()
+            if doc:
+                practitioner_id = doc.id
+        elif mode == "shadowing":
+             # Find teacher
+             if teacher_name:
+                 teacher = db.query(Practitioner).filter(Practitioner.name == teacher_name, Practitioner.role == "teacher").first()
+                 if teacher:
+                     practitioner_id = teacher.id
+        
         # JSONB Flesh (Store everything)
         record_data = {
             "medical_record": medical_info,
             "pulse_grid": data.get("pulse_grid", {}),
             "raw_input": data,
-            "client_info": { # New field for mode and teacher
-                "mode": data.get("mode", "personal"),
-                "teacher": data.get("teacher", "")
+            "client_info": { 
+                "mode": mode,
+                "teacher": teacher_name,
+                "practitioner_id": practitioner_id # redundant but useful for debug
             }
         }
         
@@ -300,6 +332,7 @@ async def save_record(data: Dict[str, Any], db: Session = Depends(get_db)):
             # Update existing record
             existing_record.complaint = complaint
             existing_record.data = record_data
+            existing_record.practitioner_id = practitioner_id # Update practitioner
             existing_record.updated_at = datetime.now()
             record_id = existing_record.id
             message = "Record updated successfully"
@@ -308,7 +341,8 @@ async def save_record(data: Dict[str, Any], db: Session = Depends(get_db)):
             new_record = MedicalRecord(
                 patient_id=patient.id,
                 complaint=complaint,
-                data=record_data
+                data=record_data,
+                practitioner_id=practitioner_id # Set practitioner
             )
             db.add(new_record)
             record_id = None # Will be set after commit

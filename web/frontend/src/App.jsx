@@ -18,6 +18,7 @@ function App() {
   const [medicalRecord, setMedicalRecord] = useState({
     complaint: '',
     prescription: '',
+    totalDosage: '6付',
     note: ''
   });
 
@@ -27,8 +28,25 @@ function App() {
   // Practice Mode State
   const [practiceMode, setPracticeMode] = useState('personal'); // 'personal' or 'shadowing'
   const [teacher, setTeacher] = useState('');
+  const [teachers, setTeachers] = useState([]);
 
-  const teachers = ["王春", "舒建平", "周静", "张小珊", "王定详"];
+  // Fetch practitioners on load
+  React.useEffect(() => {
+    const fetchPractitioners = async () => {
+      try {
+        const res = await fetch('/api/practitioners');
+        if (res.ok) {
+          const data = await res.json();
+          // Filter for teachers
+          const tList = data.filter(p => p.role === 'teacher').map(p => p.name);
+          setTeachers(tList);
+        }
+      } catch (e) {
+        console.error("Failed to fetch practitioners", e);
+      }
+    };
+    fetchPractitioners();
+  }, []);
 
   const handleLoadPatient = async (patientId) => {
     try {
@@ -44,10 +62,12 @@ function App() {
           phone: ''
         });
 
-        setMedicalRecord(data.medical_record || {
-          complaint: '',
-          prescription: '',
-          note: ''
+        const loadedRecord = data.medical_record || {};
+        setMedicalRecord({
+          complaint: loadedRecord.complaint || '',
+          prescription: loadedRecord.prescription || '',
+          totalDosage: loadedRecord.totalDosage || '6付',
+          note: loadedRecord.note || ''
         });
 
         setPulseGrid(data.pulse_grid || {});
@@ -83,10 +103,12 @@ function App() {
         // Set current record ID for deletion logic
         setCurrentRecordId(recordId);
 
-        setMedicalRecord(data.medical_record || {
-          complaint: '',
-          prescription: '',
-          note: ''
+        const loadedRecord = data.medical_record || {};
+        setMedicalRecord({
+          complaint: loadedRecord.complaint || '',
+          prescription: loadedRecord.prescription || '',
+          totalDosage: loadedRecord.totalDosage || '6付',
+          note: loadedRecord.note || ''
         });
 
         setPulseGrid(data.pulse_grid || {});
@@ -171,6 +193,7 @@ function App() {
     setMedicalRecord({
       complaint: '',
       prescription: '',
+      totalDosage: '6付',
       note: ''
     });
     setPulseGrid({});

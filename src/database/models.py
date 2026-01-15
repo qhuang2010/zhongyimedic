@@ -22,11 +22,22 @@ class Patient(Base):
 
     records = relationship("MedicalRecord", back_populates="patient")
 
+class Practitioner(Base):
+    __tablename__ = "practitioners"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True, nullable=False)
+    role = Column(String, nullable=False, default="teacher") # 'doctor' or 'teacher'
+    created_at = Column(DateTime, default=datetime.now)
+
+    records = relationship("MedicalRecord", back_populates="practitioner")
+
 class MedicalRecord(Base):
     __tablename__ = "medical_records"
 
     id = Column(Integer, primary_key=True, index=True)
     patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
+    practitioner_id = Column(Integer, ForeignKey("practitioners.id"), nullable=True) # Link to doctor/teacher
     visit_date = Column(DateTime, default=datetime.now, index=True)
     
     # Relational Skeleton for common queries
@@ -45,4 +56,5 @@ class MedicalRecord(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     patient = relationship("Patient", back_populates="records")
+    practitioner = relationship("Practitioner", back_populates="records")
 
