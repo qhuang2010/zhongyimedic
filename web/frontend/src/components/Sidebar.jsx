@@ -1,24 +1,30 @@
 import React, { useState, useEffect } from 'react';
+import DateRangePicker from './DateRangePicker';
 
 const Sidebar = ({ onPatientSelect, onRecordSelect, lastUpdateTime }) => {
   const [query, setQuery] = useState('');
   const [historyUsers, setHistoryUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState(null);
+  const [selectedRecordId, setSelectedRecordId] = useState(null);
   const [patientHistory, setPatientHistory] = useState([]);
 
-  // Date filter state
-  const [selectedDate, setSelectedDate] = useState(() => {
+  // Date range filter state
+  const [startDate, setStartDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(() => {
     const today = new Date();
     return today.toISOString().split('T')[0];
   });
 
-  // Fetch patients by date
+  // Fetch patients by date range
   const fetchByDate = React.useCallback(async () => {
-    if (!selectedDate) return;
+    if (!startDate || !endDate) return;
     setLoading(true);
     try {
-      const response = await fetch(`/api/patients/by_date?date=${selectedDate}`);
+      const response = await fetch(`/api/patients/by_date?start_date=${startDate}&end_date=${endDate}`);
       if (response.ok) {
         const data = await response.json();
         setHistoryUsers(data);
@@ -28,7 +34,7 @@ const Sidebar = ({ onPatientSelect, onRecordSelect, lastUpdateTime }) => {
     } finally {
       setLoading(false);
     }
-  }, [selectedDate]);
+  }, [startDate, endDate]);
 
   // Initial load & Date change effect
   useEffect(() => {
@@ -89,18 +95,11 @@ const Sidebar = ({ onPatientSelect, onRecordSelect, lastUpdateTime }) => {
       <h3 className="sidebar-title">历史患者</h3>
 
       <div className="date-filter" style={{ marginBottom: '15px' }}>
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '8px',
-            borderRadius: '8px',
-            border: '1px solid #d2d2d7',
-            fontFamily: 'inherit',
-            color: '#1d1d1f'
-          }}
+        <DateRangePicker
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={setStartDate}
+          onEndDateChange={setEndDate}
         />
       </div>
 
@@ -142,8 +141,20 @@ const Sidebar = ({ onPatientSelect, onRecordSelect, lastUpdateTime }) => {
                   {patientHistory.map(record => (
                     <li
                       key={record.id}
-                      onClick={() => onRecordSelect(record.id)}
-                      className="visit-item"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        console.log('Visit record clicked, id:', record.id);
+                        setSelectedRecordId(record.id);
+                        onRecordSelect(record.id);
+                      }}
+                      className={`visit-item ${selectedRecordId === record.id ? 'selected' : ''}`}
+                      style={{
+                        cursor: 'pointer',
+                        backgroundColor: selectedRecordId === record.id ? '#e3f2fd' : 'transparent',
+                        borderLeft: selectedRecordId === record.id ? '3px solid #007aff' : '3px solid transparent',
+                        paddingLeft: '10px',
+                        transition: 'all 0.2s'
+                      }}
                     >
                       <div style={{ fontWeight: '500' }}>{record.visit_date}</div>
                       <div style={{

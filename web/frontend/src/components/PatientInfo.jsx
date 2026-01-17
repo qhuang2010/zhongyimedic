@@ -12,7 +12,12 @@ const PatientInfo = ({ data, onChange, onNewPatient, onDelete }) => {
         <span>患者基本信息</span>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
-            onClick={onNewPatient}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onNewPatient();
+            }}
             style={{
               backgroundColor: '#34c759', // Green for "New"
               color: 'white',
@@ -27,7 +32,12 @@ const PatientInfo = ({ data, onChange, onNewPatient, onDelete }) => {
             + 新增患者
           </button>
           <button
-            onClick={onDelete}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDelete();
+            }}
             style={{
               backgroundColor: '#ff3b30', // Red for "Delete"
               color: 'white',
