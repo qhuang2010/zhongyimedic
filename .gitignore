@@ -29,3 +29,6 @@ pip-delete-this-directory.txt
 node_modules/
 npm-debug.log
 yarn-error.log
+
+# Databases
+*.db
