@@ -3,17 +3,24 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 
-# Default to a local PostgreSQL database if not provided
-# User should replace this with their actual DB credentials
-# SQLALCHEMY_DATABASE_URL = os.getenv(
-#     "DATABASE_URL", 
-#     "postgresql://postgres:postgres@localhost:5432/tcm_pulse_db"
-# )
+import os
+from dotenv import load_dotenv
 
-# If using SQLite for fallback (not recommended for JSONB but supported by SQLAlchemy with restrictions)
-SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
+# Load environment variables from .env file
+load_dotenv()
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+# Default to the Supabase URL or fallback to local SQLite
+SQLALCHEMY_DATABASE_URL = os.getenv(
+    "DATABASE_URL", 
+    "sqlite:///./sql_app.db"
+)
+
+# Connect arguments (SQLite specific)
+connect_args = {}
+if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
