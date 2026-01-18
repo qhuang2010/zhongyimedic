@@ -5,6 +5,7 @@ import PatientInfo from './components/PatientInfo';
 import MedicalRecord from './components/MedicalRecord';
 import PulseGrid from './components/PulseGrid';
 import AIAnalysis from './components/AIAnalysis';
+import ConfirmModal from './components/ConfirmModal';
 
 function App() {
   // Centralized State Management
@@ -203,31 +204,50 @@ function App() {
     // Usually mode persists.
   };
 
-  const handleDelete = async () => {
-    if (!currentRecordId) {
+  // Delete confirmation modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [recordToDelete, setRecordToDelete] = useState(null);
+
+  const handleDelete = () => {
+    const recordIdToDelete = currentRecordId;
+    console.log('Delete clicked, currentRecordId:', recordIdToDelete);
+
+    if (!recordIdToDelete) {
       alert("当前没有选中的病历，无法删除。");
       return;
     }
 
-    if (!window.confirm("确定要删除这条病历记录吗？此操作无法撤销。")) {
-      return;
-    }
+    // Show confirmation modal
+    setRecordToDelete(recordIdToDelete);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!recordToDelete) return;
 
     try {
-      const response = await fetch(`/api/records/${currentRecordId}`, {
+      console.log('Sending DELETE request for record:', recordToDelete);
+      const response = await fetch(`/api/records/${recordToDelete}`, {
         method: 'DELETE'
       });
 
+      console.log('DELETE response status:', response.status);
+
       if (response.ok) {
         alert("删除成功！");
-        handleNewPatient(); // Clear form
-        setLastUpdateTime(Date.now()); // Refresh sidebar
+        handleNewPatient();
+        setLastUpdateTime(Date.now());
       } else {
-        alert("删除失败");
+        const errorData = await response.text();
+        console.error('Delete failed:', errorData);
+        alert("删除失败: " + errorData);
       }
     } catch (err) {
-      console.error("Delete failed:", err);
+      console.error("Delete error:", err);
       alert("删除出错: " + err.message);
+    } finally {
+      setShowDeleteModal(false);
+      setRecordToDelete(null);
     }
   };
 
@@ -331,6 +351,17 @@ function App() {
       <div className="footer">
         <p>黄谦所有，联系方式：qhuang2010@gmail.com</p>
       </div>
+
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        title="确认删除"
+        message="确定要删除这条病历记录吗？此操作无法撤销。"
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          setShowDeleteModal(false);
+          setRecordToDelete(null);
+        }}
+      />
     </div>
   );
 }

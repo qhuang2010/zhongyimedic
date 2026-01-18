@@ -65,20 +65,47 @@ async def search_patients(
 
 @app.get("/api/patients/by_date")
 async def get_patients_by_date(
-    date: str = Query(..., description="Date in YYYY-MM-DD format"),
+    start_date: str = Query(None, description="Start date in YYYY-MM-DD format"),
+    end_date: str = Query(None, description="End date in YYYY-MM-DD format"),
+    date: str = Query(None, description="Single date in YYYY-MM-DD format (deprecated, use start_date/end_date)"),
     db: Session = Depends(get_db)
 ):
     """
-    Get patients who had a medical record on a specific date
+    Get patients who had a medical record within a date range.
+    If only one date is provided, it will be used as both start and end.
+    If no dates are provided, defaults to today.
     """
     try:
         from sqlalchemy import func
-        target_date = datetime.strptime(date, "%Y-%m-%d").date()
         
-        # Query MedicalRecords for that date, join with Patient
+        # Handle backwards compatibility and defaults
+        if start_date and end_date:
+            start = datetime.strptime(start_date, "%Y-%m-%d").date()
+            end = datetime.strptime(end_date, "%Y-%m-%d").date()
+        elif date:
+            # Legacy single date parameter
+            start = datetime.strptime(date, "%Y-%m-%d").date()
+            end = start
+        elif start_date:
+            start = datetime.strptime(start_date, "%Y-%m-%d").date()
+            end = start
+        elif end_date:
+            end = datetime.strptime(end_date, "%Y-%m-%d").date()
+            start = end
+        else:
+            # Default to today
+            start = datetime.now().date()
+            end = start
+        
+        # Ensure start <= end
+        if start > end:
+            start, end = end, start
+        
+        # Query MedicalRecords within date range, join with Patient
         records = db.query(MedicalRecord).join(Patient).filter(
-            func.date(MedicalRecord.visit_date) == target_date
-        ).all()
+            func.date(MedicalRecord.visit_date) >= start,
+            func.date(MedicalRecord.visit_date) <= end
+        ).order_by(MedicalRecord.visit_date.desc()).all()
         
         # Deduplicate patients
         seen_patients = set()
